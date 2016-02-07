@@ -43,6 +43,7 @@ import org.jolokia.restrictor.*;
 import org.jolokia.util.*;
 import org.json.simple.JSONAware;
 import org.json.simple.JSONStreamAware;
+import sun.net.www.http.ChunkedOutputStream;
 
 /**
  * HttpHandler for handling a Jolokia request
@@ -328,14 +329,15 @@ public class JolokiaHttpHandler implements HttpHandler {
     }
 
     private void sendStreamingResponse(HttpExchange pExchange, ParsedUri pParsedUri, JSONStreamAware pJson) throws IOException {
-        OutputStream out = null;
+        ChunkedOutputStream out = null;
         try {
             Headers headers = pExchange.getResponseHeaders();
             if (pJson != null) {
                 headers.set("Content-Type", getMimeType(pParsedUri) + "; charset=utf-8");
                 String callback = pParsedUri.getParameter(ConfigKey.CALLBACK.getKeyValue());
                 pExchange.sendResponseHeaders(200, 0);
-                out = pExchange.getResponseBody();
+                PrintStream printStream = new PrintStream(pExchange.getResponseBody(), true, "UTF-8");
+                out = new ChunkedOutputStream(printStream);
                 OutputStreamWriter writer = new OutputStreamWriter(out, "UTF-8");
                 if (callback == null) {
                     pJson.writeJSONString(writer);
