@@ -84,7 +84,23 @@ public class ChunkedWriter extends Writer {
             } else if (len == 0) {
                 return;
             }
+            implWrite(cbuf, off, len);
         }
+    }
+
+    public void write(int c) throws IOException {
+        char cbuf[] = new char[1];
+        cbuf[0] = (char) c;
+        write(cbuf, 0, 1);
+    }
+
+    public void write(String str, int off, int len) throws IOException {
+        /* Check the len before creating a char buffer */
+        if (len < 0)
+            throw new IndexOutOfBoundsException();
+        char cbuf[] = new char[len];
+        str.getChars(off, off + len, cbuf, 0);
+        write(cbuf, 0, len);
     }
 
     @Override
@@ -110,7 +126,12 @@ public class ChunkedWriter extends Writer {
 
     @Override
     public void close() throws IOException {
-
+        synchronized (lock) {
+            if (!isOpen)
+                return;
+            implClose();
+            isOpen = false;
+        }
     }
 
     void implWrite(char cbuf[], int off, int len) throws IOException{
@@ -195,5 +216,29 @@ public class ChunkedWriter extends Writer {
             out.write(CRLF);
         }
         bb.clear();
+    }
+
+    void implClose() throws IOException {
+        flushLeftOverChar(null, true);
+        try {
+            for (;;) {
+                CoderResult cr = encoder.flush(bb);
+                if (cr.isUnderflow())
+                    break;
+                if (cr.isOverflow()) {
+                    assert bb.position() > 0;
+                    writeBytes();
+                    continue;
+                }
+                cr.throwException();
+            }
+
+            if (bb.position() > 0)
+                writeBytes();
+            out.close();
+        } catch (IOException x) {
+            encoder.reset();
+            throw x;
+        }
     }
 }
