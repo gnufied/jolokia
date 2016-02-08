@@ -21,34 +21,7 @@ public class ChunkedWriter extends Writer {
     private char leftoverChar;
     private CharBuffer lcb = null;
 
-    private static final byte[] CRLF = {'\r', '\n'};
-    private static final int CRLF_SIZE = CRLF.length;
-    private static final byte[] FOOTER = CRLF;
-    private static final int FOOTER_SIZE = CRLF_SIZE;
-    private static final byte[] EMPTY_CHUNK_HEADER = getHeader(0);
-    private static final int EMPTY_CHUNK_HEADER_SIZE = getHeaderSize(0);
-
-    /* return the size of the header for a particular chunk size */
-    private static int getHeaderSize(int size) {
-        return (Integer.toHexString(size)).length() + CRLF_SIZE;
-    }
-
-    /* return a header for a particular chunk size */
-    private static byte[] getHeader(int size){
-        try {
-            String hexStr =  Integer.toHexString(size);
-            byte[] hexBytes = hexStr.getBytes("US-ASCII");
-            byte[] header = new byte[getHeaderSize(size)];
-            for (int i=0; i<hexBytes.length; i++)
-                header[i] = hexBytes[i];
-            header[hexBytes.length] = CRLF[0];
-            header[hexBytes.length+1] = CRLF[1];
-            return header;
-        } catch (java.io.UnsupportedEncodingException e) {
-            /* This should never happen */
-            throw new InternalError(e.getMessage(), e);
-        }
-    }
+    private static final byte[] EMPTY = {};
 
     public ChunkedWriter(OutputStream stream, String charset) {
         super(stream);
@@ -114,8 +87,27 @@ public class ChunkedWriter extends Writer {
     void implFlushBuffer() throws IOException {
         if (bb.position() > 0)
             writeBytes();
-        out.write(getHeader(0));
-        out.write(CRLF);
+        flushLeftOverChar(null, true);
+        try {
+            for (;;) {
+                CoderResult cr = encoder.flush(bb);
+                if (cr.isUnderflow())
+                    break;
+                if (cr.isOverflow()) {
+                    assert bb.position() > 0;
+                    writeBytes();
+                    continue;
+                }
+                cr.throwException();
+            }
+
+            if (bb.position() > 0)
+                writeBytes();
+        } catch (IOException x) {
+            encoder.reset();
+            throw x;
+        }
+        out.write(EMPTY);
     }
 
     void implFlush() throws IOException {
@@ -129,7 +121,7 @@ public class ChunkedWriter extends Writer {
         synchronized (lock) {
             if (!isOpen)
                 return;
-            implClose();
+            out.close();
             isOpen = false;
         }
     }
@@ -211,34 +203,8 @@ public class ChunkedWriter extends Writer {
         int rem = (pos <= lim ? lim - pos : 0);
 
         if (rem > 0) {
-            out.write(getHeader(rem));
             out.write(bb.array(), bb.arrayOffset() + pos, rem);
-            out.write(CRLF);
         }
         bb.clear();
-    }
-
-    void implClose() throws IOException {
-        flushLeftOverChar(null, true);
-        try {
-            for (;;) {
-                CoderResult cr = encoder.flush(bb);
-                if (cr.isUnderflow())
-                    break;
-                if (cr.isOverflow()) {
-                    assert bb.position() > 0;
-                    writeBytes();
-                    continue;
-                }
-                cr.throwException();
-            }
-
-            if (bb.position() > 0)
-                writeBytes();
-            out.close();
-        } catch (IOException x) {
-            encoder.reset();
-            throw x;
-        }
     }
 }

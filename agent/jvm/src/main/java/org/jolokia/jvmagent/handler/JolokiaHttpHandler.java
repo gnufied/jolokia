@@ -32,6 +32,7 @@ import javax.management.RuntimeMBeanException;
 import javax.security.auth.Subject;
 
 import com.sun.net.httpserver.*;
+import com.sun.org.apache.xml.internal.serializer.OutputPropertiesFactory;
 import org.jolokia.backend.BackendManager;
 import org.jolokia.config.ConfigKey;
 import org.jolokia.config.Configuration;
@@ -329,16 +330,14 @@ public class JolokiaHttpHandler implements HttpHandler {
     }
 
     private void sendStreamingResponse(HttpExchange pExchange, ParsedUri pParsedUri, JSONStreamAware pJson) throws IOException {
-        ChunkedOutputStream out = null;
+        ChunkedWriter writer = null;
         try {
             Headers headers = pExchange.getResponseHeaders();
             if (pJson != null) {
                 headers.set("Content-Type", getMimeType(pParsedUri) + "; charset=utf-8");
                 String callback = pParsedUri.getParameter(ConfigKey.CALLBACK.getKeyValue());
                 pExchange.sendResponseHeaders(200, 0);
-                PrintStream printStream = new PrintStream(pExchange.getResponseBody(), true, "UTF-8");
-                out = new ChunkedOutputStream(printStream);
-                OutputStreamWriter writer = new OutputStreamWriter(out, "UTF-8");
+                writer = new ChunkedWriter(pExchange.getResponseBody(), "UTF-8");
                 if (callback == null) {
                     pJson.writeJSONString(writer);
                 } else {
@@ -352,10 +351,11 @@ public class JolokiaHttpHandler implements HttpHandler {
                 pExchange.sendResponseHeaders(200,-1);
             }
         } finally {
-            if (out != null) {
+            if (writer != null) {
                 // Always close in order to finish the request.
                 // Otherwise the thread blocks.
-                out.close();
+                writer.flush();
+                writer.close();
             }
         }
     }
