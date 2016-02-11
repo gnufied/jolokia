@@ -343,10 +343,10 @@
   </issueManagement>
 
   <scm>
-    <connection>scm:git:git://github.com/rhuss/jolokia.git</connection>
-    <developerConnection>scm:git:ssh://git@github.com/rhuss/jolokia.git</developerConnection>
+    <connection>scm:git:git://github.com/gnufied/jolokia.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/gnufied/jolokia.git</developerConnection>
     <tag>v1.3.2</tag>
-    <url>git://github.com/rhuss/jolokia.git</url>
+    <url>git://github.com/gnufied/jolokia.git</url>
   </scm>
   
   <ciManagement>
@@ -468,7 +468,7 @@
       <releases>
         <enabled>false</enabled>
       </releases>
-      <snapshots>
+<snapshots>
         <enabled>true</enabled>
       </snapshots>
     </repository>
