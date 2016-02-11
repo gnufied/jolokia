@@ -192,12 +192,6 @@
         </plugin>
         
         <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-gpg-plugin</artifactId>
-          <version>1.6</version>
-        </plugin>
-
-        <plugin>
           <groupId>org.apache.felix</groupId>
           <artifactId>maven-scr-plugin</artifactId>
           <version>1.15.0</version>
@@ -521,24 +515,6 @@
             </executions>
           </plugin>
           
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-gpg-plugin</artifactId>
-            <version>1.6</version>
-            <executions>
-              <execution>
-                <id>sign-artifacts</id>
-                <phase>verify</phase>
-                <goals>
-                  <goal>sign</goal>
-                </goals>
-              </execution>
-            </executions>
-            <configuration>
-              <useAgent>true</useAgent>
-              <keyname>roland@jolokia.org</keyname>
-            </configuration>
-          </plugin>
 
           <plugin>
             <groupId>com.github.github</groupId>
